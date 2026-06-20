@@ -1,0 +1,7 @@
+[project]
+name = "fine-tuning-demos"
+version = "0.1.0"
+description = "Fine Tuning Demo for Financial Vertical"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
