@@ -49,9 +49,8 @@ sft_config = SFTConfig(
     per_device_train_batch_size=1,
     learning_rate=2e-4,
     logging_steps=1,
-    max_seq_length=512,
+    max_length=512,
 )
-
 # Train
 trainer = SFTTrainer(
     model=model,
