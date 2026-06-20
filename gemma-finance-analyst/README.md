@@ -19,7 +19,7 @@ The goal is to show how the same task can be tackled with increasing levels of s
 | Phase | Directory | Approach | Status |
 |-------|-----------|----------|--------|
 | **1 — Prompt Engineering** | `01_prompt_engineering/` | Zero-shot prompting with a system prompt and JSON template | ✅ Complete |
-| **2 — RAG** | `02_rag/` | Retrieval-Augmented Generation for richer context | 🔜 Upcoming |
+| **2 — RAG** | `02_rag/` | Retrieval-Augmented Generation for richer context | ✅ Complete |
 | **3 — Fine-Tuning** | `03_fine_tuning/` | Fine-tune Gemma on domain-specific financial data | 🔜 Upcoming |
 
 ---
@@ -39,6 +39,35 @@ This phase demonstrates **pure prompt engineering** — no retrieval, no fine-tu
 
 ```bash
 python 01_prompt_engineering/pe_analyst.py
+```
+
+---
+
+### Phase 2 — RAG (`02_rag/`)
+
+This phase adds **Retrieval-Augmented Generation** so the model can answer questions across multiple earnings transcripts (Q1–Q3 2024) instead of just one.
+
+It consists of two scripts:
+
+1. **`ingest.py`** — Ingestion pipeline
+   - Loads all transcript files from `data/`.
+   - Generates embeddings using the `all-MiniLM-L6-v2` sentence-transformer model.
+   - Stores documents and embeddings in a persistent **ChromaDB** vector database (`02_rag/db/`).
+
+2. **`rag_analyst.py`** — Query pipeline
+   - Encodes the user's question into an embedding.
+   - Retrieves the top-3 most relevant transcripts from ChromaDB.
+   - Sends the retrieved context + question to Gemma 2 (9B) via Ollama.
+   - Prints the model's answer grounded in the retrieved documents.
+
+**Run it:**
+
+```bash
+# Step 1: Ingest the transcripts into the vector DB
+python 02_rag/ingest.py
+
+# Step 2: Ask a question across all transcripts
+python 02_rag/rag_analyst.py
 ```
 
 ---
@@ -84,9 +113,12 @@ ollama pull gemma2:9b
 
 ### 3. Python Dependencies
 
-The project requires **Python ≥ 3.14** and the following package (defined in `pyproject.toml`):
+The project requires **Python ≥ 3.14** and the following packages (defined in `pyproject.toml`):
 
 - `ollama` — Python client for the Ollama API
+- `chromadb` — Vector database for storing and querying document embeddings
+- `sentence-transformers` — Embedding model (`all-MiniLM-L6-v2`) for encoding text
+- `torch` — PyTorch, required by sentence-transformers
 
 **Install with UV:**
 
@@ -116,6 +148,10 @@ source .venv/bin/activate
 
 # 5. Run Phase 1 — Prompt Engineering
 python 01_prompt_engineering/pe_analyst.py
+
+# 6. Run Phase 2 — RAG
+python 02_rag/ingest.py        # ingest transcripts into vector DB
+python 02_rag/rag_analyst.py   # ask questions across all transcripts
 ```
 
 ## Project Structure
@@ -124,10 +160,15 @@ python 01_prompt_engineering/pe_analyst.py
 gemma-finance-analyst/
 ├── 01_prompt_engineering/
 │   └── pe_analyst.py          # Phase 1: prompt-only approach
-├── 02_rag/                    # Phase 2: RAG (upcoming)
+├── 02_rag/
+│   ├── ingest.py              # Phase 2: ingest transcripts into ChromaDB
+│   └── rag_analyst.py         # Phase 2: RAG-powered Q&A
 ├── 03_fine_tuning/            # Phase 3: fine-tuning (upcoming)
 ├── data/
-│   └── earnings_transcript.txt
+│   ├── earnings_transcript.txt
+│   ├── q1_2024.txt
+│   ├── q2_2024.txt
+│   └── q3_2024.txt
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
