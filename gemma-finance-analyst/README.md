@@ -20,7 +20,7 @@ The goal is to show how the same task can be tackled with increasing levels of s
 |-------|-----------|----------|--------|
 | **1 — Prompt Engineering** | `01_prompt_engineering/` | Zero-shot prompting with a system prompt and JSON template | ✅ Complete |
 | **2 — RAG** | `02_rag/` | Retrieval-Augmented Generation for richer context | ✅ Complete |
-| **3 — Fine-Tuning** | `03_fine_tuning/` | Fine-tune Gemma on domain-specific financial data | 🔜 Upcoming |
+| **3 — Fine-Tuning** | `03_fine_tuning/` | Fine-tune Gemma on domain-specific financial data | ✅ Complete |
 
 ---
 
@@ -72,6 +72,44 @@ python 02_rag/rag_analyst.py
 
 ---
 
+### Phase 3 — Fine-Tuning (`03_fine_tuning/`)
+
+This phase **fine-tunes Gemma 2 (2B)** on domain-specific financial earnings data using **LoRA** (Low-Rank Adaptation) via Hugging Face PEFT and TRL. It requires a Hugging Face API token for model access.
+
+It consists of two scripts:
+
+1. **`finetune.py`** — Training pipeline
+   - Loads prompt/completion pairs from `data/training_data.jsonl`.
+   - Downloads the `google/gemma-2-2b` base model from Hugging Face.
+   - Applies LoRA adapters to the attention layers (`q_proj`, `v_proj`, `k_proj`, `o_proj`) with rank 16.
+   - Trains for 10 epochs using `SFTTrainer` from TRL.
+   - Saves the fine-tuned LoRA adapter to `03_fine_tuning/output/`.
+
+2. **`inference.py`** — Inference pipeline
+   - Loads the base Gemma 2 (2B) model and applies the saved LoRA adapter.
+   - Feeds a test earnings transcript and generates a structured JSON analysis.
+   - Demonstrates the fine-tuned model's ability to extract revenue, EPS, sentiment, and risk flags.
+
+**Setup:**
+
+Create a `.env` file with your Hugging Face token:
+
+```bash
+HF_TOKEN=hf_your_token_here
+```
+
+**Run it:**
+
+```bash
+# Step 1: Fine-tune the model (takes a few minutes on CPU)
+python 03_fine_tuning/finetune.py
+
+# Step 2: Run inference with the fine-tuned model
+python 03_fine_tuning/inference.py
+```
+
+---
+
 ## Dependencies
 
 ### 1. UV (Python Package Manager)
@@ -111,14 +149,27 @@ ollama serve
 ollama pull gemma2:9b
 ```
 
-### 3. Python Dependencies
+### 3. Hugging Face Token (Phase 3 only)
+
+Phase 3 requires access to the gated `google/gemma-2-2b` model on Hugging Face. Create a `.env` file in the project root:
+
+```bash
+HF_TOKEN=hf_your_token_here
+```
+
+### 4. Python Dependencies
 
 The project requires **Python ≥ 3.14** and the following packages (defined in `pyproject.toml`):
 
-- `ollama` — Python client for the Ollama API
-- `chromadb` — Vector database for storing and querying document embeddings
-- `sentence-transformers` — Embedding model (`all-MiniLM-L6-v2`) for encoding text
-- `torch` — PyTorch, required by sentence-transformers
+- `ollama` — Python client for the Ollama API (Phases 1 & 2)
+- `chromadb` — Vector database for storing and querying document embeddings (Phase 2)
+- `sentence-transformers` — Embedding model (`all-MiniLM-L6-v2`) for encoding text (Phase 2)
+- `torch` — PyTorch
+- `transformers` — Hugging Face Transformers for model loading (Phase 3)
+- `peft` — Parameter-Efficient Fine-Tuning / LoRA (Phase 3)
+- `trl` — Transformer Reinforcement Learning / SFTTrainer (Phase 3)
+- `accelerate` — Hugging Face training accelerator (Phase 3)
+- `python-dotenv` — Load environment variables from `.env` (Phase 3)
 
 **Install with UV:**
 
@@ -152,23 +203,34 @@ python 01_prompt_engineering/pe_analyst.py
 # 6. Run Phase 2 — RAG
 python 02_rag/ingest.py        # ingest transcripts into vector DB
 python 02_rag/rag_analyst.py   # ask questions across all transcripts
+
+# 7. Run Phase 3 — Fine-Tuning (requires HF_TOKEN in .env)
+python 03_fine_tuning/finetune.py   # fine-tune Gemma 2 (2B) with LoRA
+python 03_fine_tuning/inference.py  # run inference with the fine-tuned model
 ```
 
 ## Project Structure
 
 ```
 gemma-finance-analyst/
+├── 00_scratch/
+│   └── scratch.py             # Scratch / experimentation
 ├── 01_prompt_engineering/
 │   └── pe_analyst.py          # Phase 1: prompt-only approach
 ├── 02_rag/
 │   ├── ingest.py              # Phase 2: ingest transcripts into ChromaDB
 │   └── rag_analyst.py         # Phase 2: RAG-powered Q&A
-├── 03_fine_tuning/            # Phase 3: fine-tuning (upcoming)
+├── 03_fine_tuning/
+│   ├── finetune.py            # Phase 3: LoRA fine-tuning script
+│   ├── inference.py           # Phase 3: inference with fine-tuned model
+│   └── output/                # Saved LoRA adapter weights
 ├── data/
 │   ├── earnings_transcript.txt
 │   ├── q1_2024.txt
 │   ├── q2_2024.txt
-│   └── q3_2024.txt
+│   ├── q3_2024.txt
+│   └── training_data.jsonl    # Fine-tuning training examples
+├── .env                       # HF_TOKEN (not committed)
 ├── pyproject.toml
 ├── uv.lock
 └── README.md

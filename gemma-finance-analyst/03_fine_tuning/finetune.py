@@ -32,9 +32,9 @@ model = AutoModelForCausalLM.from_pretrained(model_id, token=hf_token)
 
 # LoRA config
 lora_config = LoraConfig(
-    r=8,
-    lora_alpha=16,
-    target_modules=["q_proj", "v_proj"],
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
     lora_dropout=0.05,
     task_type="CAUSAL_LM"
 )
@@ -45,7 +45,7 @@ model.print_trainable_parameters()
 # Training config
 sft_config = SFTConfig(
     output_dir="03_fine_tuning/output",
-    num_train_epochs=3,
+    num_train_epochs=10,
     per_device_train_batch_size=1,
     learning_rate=2e-4,
     logging_steps=1,
